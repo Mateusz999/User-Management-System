@@ -1,0 +1,484 @@
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.*;
+import java.util.List;
+
+public class UserApp {
+
+    public static class User {
+        private int id;
+        private String imie;
+        private String nazwisko;
+        private int wiek;
+        private int wzrost;
+        private String nrTelefonu;
+        private boolean statusStudenta;
+        private boolean zatrudnienie;
+
+        public User(int id, String imie, String nazwisko, int wiek, int wzrost, String nrTelefonu, boolean statusStudenta, boolean zatrudnienie) {
+            this.id = id;
+            this.imie = imie;
+            this.nazwisko = nazwisko;
+            this.wiek = wiek;
+            this.wzrost = wzrost;
+            this.nrTelefonu = nrTelefonu;
+            this.statusStudenta = statusStudenta;
+            this.zatrudnienie = zatrudnienie;
+        }
+
+        public int getId() { return id; }
+        public String getImie() { return imie; }
+        public String getNazwisko() { return nazwisko; }
+        public int getWiek() { return wiek; }
+        public int getWzrost() { return wzrost; }
+        public String getNrTelefonu() { return nrTelefonu; }
+        public boolean isStatusStudenta() { return statusStudenta; }
+        public boolean isZatrudnienie() { return zatrudnienie; }
+
+        @Override
+        public String toString() {
+            return id + "," + imie + "," + nazwisko + "," + wiek + "," + wzrost + "," + nrTelefonu + "," + statusStudenta + "," + zatrudnienie;
+        }
+    }
+
+    public static class UserManager {
+        private List<User> users = new ArrayList<>();
+        private int nextId = 1;
+
+        private String[] imiona = {"Jan", "Anna", "Piotr", "Michael", "Katarzyna", "Magdalena"};
+        private String[] nazwiska = {"Kowalski", "Nowak", "Winiary", "Wojtowicz", "Kaczmarek", "Jankowski"};
+        private String[] numeryTelefonow = {"123456789", "987654321", "456789123", "321654987", "654987321"};
+
+        public void addUser(String imie, String nazwisko, int wiek, int wzrost, String nrTelefonu, boolean statusStudenta, boolean zatrudnienie) {
+            User user = new User(nextId++, imie, nazwisko, wiek, wzrost, nrTelefonu, statusStudenta, zatrudnienie);
+            users.add(user);
+        }
+
+        public List<User> getAllUsers() {
+            return users;
+        }
+
+        public void removeUser(int id) {
+            users.removeIf(user -> user.getId() == id);
+        }
+
+        public void clearUsers() {
+            users.clear();
+        }
+
+        // Losowanie u¿ytkowników
+        public void generateRandomUsers(int count) {
+            Random rand = new Random();
+            for (int i = 0; i < count; i++) {
+                String imie = imiona[rand.nextInt(imiona.length)];
+                String nazwisko = nazwiska[rand.nextInt(nazwiska.length)];
+                int wiek = rand.nextInt(50) + 18;
+                int wzrost = rand.nextInt(40) + 150;
+                String nrTelefonu = numeryTelefonow[rand.nextInt(numeryTelefonow.length)];
+                boolean statusStudenta = rand.nextBoolean();
+                boolean zatrudnienie = rand.nextBoolean();
+                
+                addUser(imie, nazwisko, wiek, wzrost, nrTelefonu, statusStudenta, zatrudnienie);
+            }
+        }
+
+        // Eksport do CSV
+        public void exportToCSV(String filename) throws IOException {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+            for (User user : users) {
+                writer.write(user.toString());
+                writer.newLine();
+            }
+            writer.close();
+        }
+
+        // Import z CSV
+        public void importFromCSV(String filename) throws IOException {
+            BufferedReader reader = new BufferedReader(new FileReader(filename));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
+                User user = new User(nextId++, data[1], data[2], Integer.parseInt(data[3]), Integer.parseInt(data[4]), data[5], Boolean.parseBoolean(data[6]), Boolean.parseBoolean(data[7]));
+                users.add(user);
+            }
+            reader.close();
+        }
+    }
+
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("User Management");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(1000, 700);
+        frame.setLayout(new BorderLayout());
+
+        UserManager userManager = new UserManager();
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        // Tabela
+        String[] columnNames = {"ID", "Imie", "Nazwisko", "Wiek", "Wzrost", "Nr Telefonu", "Status Studenta", "Zatrudnienie"};
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
+        JTable table = new JTable(tableModel);
+        JScrollPane scrollPane = new JScrollPane(table);
+        panel.add(scrollPane);
+
+        // Panel do dodawania nowych u¿ytkowników
+        JPanel addUserPanel = new JPanel();
+        addUserPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JTextField imieField = new JTextField(10);
+        JTextField nazwiskoField = new JTextField(10);
+        JTextField wiekField = new JTextField(5);
+        JTextField wzrostField = new JTextField(5);
+        JTextField telefonField = new JTextField(10);
+        JCheckBox studentCheckBox = new JCheckBox("Student");
+        JCheckBox zatrudnienieCheckBox = new JCheckBox("Zatrudniony");
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        addUserPanel.add(new JLabel("Imie"), gbc);
+        gbc.gridx = 1;
+        addUserPanel.add(imieField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        addUserPanel.add(new JLabel("Nazwisko"), gbc);
+        gbc.gridx = 1;
+        addUserPanel.add(nazwiskoField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        addUserPanel.add(new JLabel("Wiek"), gbc);
+        gbc.gridx = 1;
+        addUserPanel.add(wiekField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        addUserPanel.add(new JLabel("Wzrost"), gbc);
+        gbc.gridx = 1;
+        addUserPanel.add(wzrostField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        addUserPanel.add(new JLabel("Nr Telefonu"), gbc);
+        gbc.gridx = 1;
+        addUserPanel.add(telefonField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        addUserPanel.add(studentCheckBox, gbc);
+        gbc.gridx = 1;
+        addUserPanel.add(zatrudnienieCheckBox, gbc);
+
+        JButton addUserButton = new JButton("Dodaj Uzytkownika");
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        gbc.gridwidth = 2;
+        addUserPanel.add(addUserButton, gbc);
+        panel.add(addUserPanel);
+
+        // Przycisk dodawania u¿ytkownika
+        addUserButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String imie = imieField.getText();
+                String nazwisko = nazwiskoField.getText();
+                int wiek = Integer.parseInt(wiekField.getText());
+                int wzrost = Integer.parseInt(wzrostField.getText());
+                String nrTelefonu = telefonField.getText();
+                boolean statusStudenta = studentCheckBox.isSelected();
+                boolean zatrudnienie = zatrudnienieCheckBox.isSelected();
+
+                userManager.addUser(imie, nazwisko, wiek, wzrost, nrTelefonu, statusStudenta, zatrudnienie);
+                tableModel.addRow(new Object[]{userManager.getAllUsers().size(), imie, nazwisko, wiek, wzrost, nrTelefonu, statusStudenta, zatrudnienie});
+            }
+        });
+
+        // Panel do przycisków
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new GridLayout(3, 3, 10, 10));
+
+        // Przycisk generowania u¿ytkowników
+        JButton generateButton = new JButton("Generuj Uzytkownikow");
+        buttonPanel.add(generateButton);
+        generateButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String input = JOptionPane.showInputDialog(frame, "Podaj liczbe uzytkownikow do wygenerowania:");
+                int count = Integer.parseInt(input);
+                userManager.generateRandomUsers(count);
+                for (User user : userManager.getAllUsers()) {
+                    tableModel.addRow(new Object[]{
+                        user.getId(), user.getImie(), user.getNazwisko(), user.getWiek(),
+                        user.getWzrost(), user.getNrTelefonu(), user.isStatusStudenta(), user.isZatrudnienie()
+                    });
+                }
+            }
+        });
+
+        // Eksport do CSV
+        JButton exportButton = new JButton("Eksportuj do CSV");
+        buttonPanel.add(exportButton);
+        exportButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    JFileChooser fileChooser = new JFileChooser();
+                    if (fileChooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
+                        File file = fileChooser.getSelectedFile();
+                        userManager.exportToCSV(file.getAbsolutePath());
+                        JOptionPane.showMessageDialog(frame, "Eksport zakonczony.");
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+        // Import z CSV
+        JButton importButton = new JButton("Importuj z CSV");
+        buttonPanel.add(importButton);
+        importButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    JFileChooser fileChooser = new JFileChooser();
+                    if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+                        File file = fileChooser.getSelectedFile();
+                        userManager.importFromCSV(file.getAbsolutePath());
+                        tableModel.setRowCount(0);
+                        for (User user : userManager.getAllUsers()) {
+                            tableModel.addRow(new Object[]{
+                                user.getId(), user.getImie(), user.getNazwisko(), user.getWiek(),
+                                user.getWzrost(), user.getNrTelefonu(), user.isStatusStudenta(), user.isZatrudnienie()
+                            });
+                        }
+                        JOptionPane.showMessageDialog(frame, "Import zakonczony.");
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+        // Przycisk usuwania wszystkich u¿ytkowników
+        JButton clearButton = new JButton("Usun wszystkich uzytkownikow");
+        buttonPanel.add(clearButton);
+        clearButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                userManager.clearUsers();
+                tableModel.setRowCount(0); // Usuñ wszystkie wiersze z tabeli
+            }
+        });
+
+        // Przycisk usuwania pojedynczego u¿ytkownika
+        JButton removeUserButton = new JButton("Usun uzytkownika");
+        buttonPanel.add(removeUserButton);
+        removeUserButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    int userId = (Integer) tableModel.getValueAt(selectedRow, 0);
+                    userManager.removeUser(userId);
+                    tableModel.removeRow(selectedRow); // Usuñ wiersz z tabeli
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Wybierz uzytkownika do usuniecia.");
+                }
+            }
+        });
+
+        // Przycisk wyszukiwania binarnego
+        JButton searchButton = new JButton("Wyszukaj uzytkownika");
+        buttonPanel.add(searchButton);
+        searchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String input = JOptionPane.showInputDialog(frame, "Podaj ID uzytkownika do wyszukania:");
+                int id = Integer.parseInt(input);
+                User user = binarySearch(userManager.getAllUsers(), id);
+                if (user != null) {
+                    JOptionPane.showMessageDialog(frame, "Znaleziono uzytkownika: " + user.getImie() + " " + user.getNazwisko());
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Nie znaleziono uzytkownika o podanym ID.");
+                }
+            }
+        });
+
+        // Przycisk wyszukiwania liniowego
+        JButton linearSearchButton = new JButton("Liniowe wyszukiwanie");
+        buttonPanel.add(linearSearchButton);
+        linearSearchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String column = JOptionPane.showInputDialog(frame, "Podaj nazwe kolumny do wyszukania:");
+                String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
+                long startTime = System.currentTimeMillis();
+                List<User> results = linearSearch(userManager.getAllUsers(), column, value);
+                long endTime = System.currentTimeMillis();
+                updateTableWithResults(table, results);
+                displaySearchResults(results, endTime - startTime);
+            }
+        });
+
+        // Przycisk wyszukiwania binarnego
+        JButton binarySearchButton = new JButton("Binarne wyszukiwanie");
+        buttonPanel.add(binarySearchButton);
+        binarySearchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String column = JOptionPane.showInputDialog(frame, "Podaj nazwe kolumny do wyszukania:");
+                String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
+                long startTime = System.currentTimeMillis();
+                List<User> results = binarySearch(userManager.getAllUsers(), column, value);
+                long endTime = System.currentTimeMillis();
+                updateTableWithResults(table, results);
+                displaySearchResults(results, endTime - startTime);
+            }
+        });
+
+        // Przycisk wyszukiwania ³añcuchowego
+        JButton chainSearchButton = new JButton("Lancuchowe wyszukiwanie");
+        buttonPanel.add(chainSearchButton);
+        chainSearchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String column = JOptionPane.showInputDialog(frame, "Podaj nazwe kolumny do wyszukania:");
+                String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
+                long startTime = System.currentTimeMillis();
+                List<User> results = chainSearch(userManager.getAllUsers(), column, value);
+                long endTime = System.currentTimeMillis();
+                updateTableWithResults(table, results);
+                displaySearchResults(results, endTime - startTime);
+            }
+        });
+
+        panel.add(buttonPanel);
+
+        frame.add(panel, BorderLayout.CENTER);
+        frame.setVisible(true);
+    }
+
+    // Metoda wyszukiwania binarnego
+    public static User binarySearch(List<User> users, int id) {
+        int left = 0;
+        int right = users.size() - 1;
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (users.get(mid).getId() == id) {
+                return users.get(mid);
+            }
+            if (users.get(mid).getId() < id) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        return null;
+    }
+
+    // Metoda wyszukiwania liniowego
+    public static List<User> linearSearch(List<User> users, String column, String value) {
+        List<User> results = new ArrayList<>();
+        for (User user : users) {
+            if (matches(user, column, value)) {
+                results.add(user);
+            }
+        }
+        return results;
+    }
+
+    // Metoda wyszukiwania binarnego
+    public static List<User> binarySearch(List<User> users, String column, String value) {
+        List<User> results = new ArrayList<>();
+        users.sort(Comparator.comparing(user -> getFieldValue(user, column)));
+        int left = 0;
+        int right = users.size() - 1;
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            String midValue = getFieldValue(users.get(mid), column);
+            if (midValue.equals(value)) {
+                results.add(users.get(mid));
+                // Search for duplicates on both sides
+                int i = mid - 1;
+                while (i >= left && getFieldValue(users.get(i), column).equals(value)) {
+                    results.add(users.get(i));
+                    i--;
+                }
+                i = mid + 1;
+                while (i <= right && getFieldValue(users.get(i), column).equals(value)) {
+                    results.add(users.get(i));
+                    i++;
+                }
+                break;
+            }
+            if (midValue.compareTo(value) < 0) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        return results;
+    }
+
+    // Metoda wyszukiwania ³añcuchowego
+    public static List<User> chainSearch(List<User> users, String column, String value) {
+        Map<String, List<User>> hashMap = new HashMap<>();
+        for (User user : users) {
+            String key = getFieldValue(user, column);
+            hashMap.computeIfAbsent(key, k -> new ArrayList<>()).add(user);
+        }
+        return hashMap.getOrDefault(value, new ArrayList<>());
+    }
+
+    // Metoda pomocnicza do porównywania wartoœci pola
+    public static boolean matches(User user, String column, String value) {
+        return getFieldValue(user, column).equals(value);
+    }
+
+    // Metoda pomocnicza do pobierania wartoœci pola
+    public static String getFieldValue(User user, String column) {
+        switch (column.toLowerCase()) {
+            case "id": return String.valueOf(user.getId());
+            case "imie": return user.getImie();
+            case "nazwisko": return user.getNazwisko();
+            case "wiek": return String.valueOf(user.getWiek());
+            case "wzrost": return String.valueOf(user.getWzrost());
+            case "nr telefonu": return user.getNrTelefonu();
+            case "status studenta": return String.valueOf(user.isStatusStudenta());
+            case "zatrudnienie": return String.valueOf(user.isZatrudnienie());
+            default: throw new IllegalArgumentException("Nieznana kolumna: " + column);
+        }
+    }
+
+    // Metoda pomocnicza do wyœwietlania wyników wyszukiwania
+    public static void displaySearchResults(List<User> results, long searchTime) {
+        if (results.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Nie znaleziono wynikow. Czas wyszukiwania: " + searchTime + " ms");
+        } else {
+            StringBuilder sb = new StringBuilder("Znaleziono uzytkownikow (czas wyszukiwania: " + searchTime + " ms):\n");
+            
+            JOptionPane.showMessageDialog(null, sb.toString());
+        }
+    }
+
+    // Metoda pomocnicza do aktualizacji tabeli z wynikami wyszukiwania
+    public static void updateTableWithResults(JTable table, List<User> results) {
+        DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
+        tableModel.setRowCount(0); // Usuñ wszystkie wiersze z tabeli
+        for (User user : results) {
+            tableModel.addRow(new Object[]{
+                user.getId(), user.getImie(), user.getNazwisko(), user.getWiek(),
+                user.getWzrost(), user.getNrTelefonu(), user.isStatusStudenta(), user.isZatrudnienie()
+            });
+        }
+    }
+}

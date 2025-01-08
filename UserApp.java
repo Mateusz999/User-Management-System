@@ -63,13 +63,16 @@ public class UserApp {
 
         public void removeUser(int id) {
             users.removeIf(user -> user.getId() == id);
+            hashMap.clear(); // Clear the hashmap when a user is removed
         }
 
         public void clearUsers() {
             users.clear();
+            nextId = 1;
+            hashMap.clear(); // Clear the hashmap when all users are removed
         }
 
-        // Losowanie u¿ytkowników
+        // Losowanie u?ytkowników
         public void generateRandomUsers(int count) {
             Random rand = new Random();
             for (int i = 0; i < count; i++) {
@@ -126,7 +129,7 @@ public class UserApp {
         JScrollPane scrollPane = new JScrollPane(table);
         panel.add(scrollPane);
 
-        // Panel do dodawania nowych u¿ytkowników
+        // Panel do dodawania nowych u?ytkowników
         JPanel addUserPanel = new JPanel();
         addUserPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -180,11 +183,31 @@ public class UserApp {
         JButton addUserButton = new JButton("Dodaj Uzytkownika");
         gbc.gridx = 0;
         gbc.gridy = 6;
-        gbc.gridwidth = 2;
+        gbc.gridwidth = 1;
         addUserPanel.add(addUserButton, gbc);
+
+        JButton showAllUsers = new JButton("Pokaz wszystkich uzytkownikow");
+        gbc.gridx = 1;
+        gbc.gridy = 6;
+        gbc.gridwidth = 1;
+        addUserPanel.add(showAllUsers, gbc);
+
         panel.add(addUserPanel);
 
-        // Przycisk dodawania u¿ytkownika
+        showAllUsers.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            tableModel.setRowCount(0); // Clear earlier search results
+            List<User> allUsers = userManager.getAllUsers();
+            allUsers.sort(Comparator.comparingInt(User::getId)); // Sort users by ID
+            for (User user : allUsers) {
+                tableModel.addRow(new Object[]{
+                user.getId(), user.getImie(), user.getNazwisko(), user.getWiek(),
+                user.getWzrost(), user.getNrTelefonu(), user.isStatusStudenta(), user.isZatrudnienie()
+                });
+            }
+            }
+        });
         addUserButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -205,15 +228,18 @@ public class UserApp {
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new GridLayout(3, 3, 10, 10));
 
-        // Przycisk generowania u¿ytkowników
+        // Przycisk generowania u?ytkowników
         JButton generateButton = new JButton("Generuj Uzytkownikow");
         buttonPanel.add(generateButton);
         generateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String input = JOptionPane.showInputDialog(frame, "Podaj liczbe uzytkownikow do wygenerowania:");
-                int count = Integer.parseInt(input);
+                String[] options = {"100 000", "200 000", "300 000", "500 000", "1 000 000", "2 000 000", "5 000 000", "10 000 000", "15 000 000", "20 000 000"};
+                String input = (String) JOptionPane.showInputDialog(frame, "Wybierz liczbe uzytkownikow do wygenerowania:", "Generowanie Uzytkownikow", JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+                int count = Integer.parseInt(input.replace(" ", ""));
                 userManager.generateRandomUsers(count);
+                tableModel.setRowCount(0);
+         
                 for (User user : userManager.getAllUsers()) {
                     tableModel.addRow(new Object[]{
                         user.getId(), user.getImie(), user.getNazwisko(), user.getWiek(),
@@ -268,18 +294,18 @@ public class UserApp {
             }
         });
 
-        // Przycisk usuwania wszystkich u¿ytkowników
+        // Przycisk usuwania wszystkich u?ytkowników
         JButton clearButton = new JButton("Usun wszystkich uzytkownikow");
         buttonPanel.add(clearButton);
         clearButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 userManager.clearUsers();
-                tableModel.setRowCount(0); // Usuñ wszystkie wiersze z tabeli
+                tableModel.setRowCount(0); // Usu? wszystkie wiersze z tabeli
             }
         });
 
-        // Przycisk usuwania pojedynczego u¿ytkownika
+        // Przycisk usuwania pojedynczego u?ytkownika
         JButton removeUserButton = new JButton("Usun uzytkownika");
         buttonPanel.add(removeUserButton);
         removeUserButton.addActionListener(new ActionListener() {
@@ -289,7 +315,7 @@ public class UserApp {
                 if (selectedRow >= 0) {
                     int userId = (Integer) tableModel.getValueAt(selectedRow, 0);
                     userManager.removeUser(userId);
-                    tableModel.removeRow(selectedRow); // Usuñ wiersz z tabeli
+                    tableModel.removeRow(selectedRow); // Usu? wiersz z tabeli
                 } else {
                     JOptionPane.showMessageDialog(frame, "Wybierz uzytkownika do usuniecia.");
                 }
@@ -304,12 +330,14 @@ public class UserApp {
             public void actionPerformed(ActionEvent e) {
                 String input = JOptionPane.showInputDialog(frame, "Podaj ID uzytkownika do wyszukania:");
                 int id = Integer.parseInt(input);
-                User user = binarySearch(userManager.getAllUsers(), id);
-                if (user != null) {
-                    JOptionPane.showMessageDialog(frame, "Znaleziono uzytkownika: " + user.getImie() + " " + user.getNazwisko());
-                } else {
-                    JOptionPane.showMessageDialog(frame, "Nie znaleziono uzytkownika o podanym ID.");
-                }
+                long startTime = System.currentTimeMillis();
+                String column = "ID";
+                String value = String.valueOf(id);
+                List<User> results = binarySearch(userManager.getAllUsers(), column, value);
+                long endTime = System.currentTimeMillis();
+                updateTableWithResults(table, results);
+                displaySearchResults(results, endTime - startTime);
+            
             }
         });
 
@@ -319,7 +347,8 @@ public class UserApp {
         linearSearchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String column = JOptionPane.showInputDialog(frame, "Podaj nazwe kolumny do wyszukania:");
+                String[] columns = {"ID", "Imie", "Nazwisko", "Wiek", "Wzrost", "Nr Telefonu", "Status Studenta", "Zatrudnienie"};
+                String column = (String) JOptionPane.showInputDialog(frame, "Wybierz kolumne do wyszukania:", "Wyszukiwanie", JOptionPane.QUESTION_MESSAGE, null, columns, columns[0]);
                 String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
                 long startTime = System.currentTimeMillis();
                 List<User> results = linearSearch(userManager.getAllUsers(), column, value);
@@ -335,7 +364,8 @@ public class UserApp {
         binarySearchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String column = JOptionPane.showInputDialog(frame, "Podaj nazwe kolumny do wyszukania:");
+                String[] columns = {"ID", "Imie", "Nazwisko", "Wiek", "Wzrost", "Nr Telefonu", "Status Studenta", "Zatrudnienie"};
+                String column = (String) JOptionPane.showInputDialog(frame, "Wybierz kolumne do wyszukania:", "Wyszukiwanie", JOptionPane.QUESTION_MESSAGE, null, columns, columns[0]);
                 String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
                 long startTime = System.currentTimeMillis();
                 List<User> results = binarySearch(userManager.getAllUsers(), column, value);
@@ -345,13 +375,14 @@ public class UserApp {
             }
         });
 
-        // Przycisk wyszukiwania ³añcuchowego
+        // Przycisk wyszukiwania ?a?cuchowego
         JButton chainSearchButton = new JButton("Lancuchowe wyszukiwanie");
         buttonPanel.add(chainSearchButton);
         chainSearchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String column = JOptionPane.showInputDialog(frame, "Podaj nazwe kolumny do wyszukania:");
+                String[] columns = {"ID", "Imie", "Nazwisko", "Wiek", "Wzrost", "Nr Telefonu", "Status Studenta", "Zatrudnienie"};
+                String column = (String) JOptionPane.showInputDialog(frame, "Wybierz kolumne do wyszukania:", "Wyszukiwanie", JOptionPane.QUESTION_MESSAGE, null, columns, columns[0]);
                 String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
                 long startTime = System.currentTimeMillis();
                 List<User> results = chainSearch(userManager.getAllUsers(), column, value);
@@ -399,24 +430,28 @@ public class UserApp {
     // Metoda wyszukiwania binarnego
     public static List<User> binarySearch(List<User> users, String column, String value) {
         List<User> results = new ArrayList<>();
-        users.sort(Comparator.comparing(user -> getFieldValue(user, column)));
+        if (!isSorted(users, column)) {
+            users.sort(Comparator.comparing(user -> getFieldValue(user, column)));
+        }
         int left = 0;
         int right = users.size() - 1;
         while (left <= right) {
             int mid = left + (right - left) / 2;
             String midValue = getFieldValue(users.get(mid), column);
             if (midValue.equals(value)) {
-                results.add(users.get(mid));
-                // Search for duplicates on both sides
-                int i = mid - 1;
-                while (i >= left && getFieldValue(users.get(i), column).equals(value)) {
-                    results.add(users.get(i));
-                    i--;
+                // Find the first occurrence
+                int first = mid;
+                while (first >= left && getFieldValue(users.get(first), column).equals(value)) {
+                    first--;
                 }
-                i = mid + 1;
-                while (i <= right && getFieldValue(users.get(i), column).equals(value)) {
+                first++;
+                int last = mid;
+                while (last <= right && getFieldValue(users.get(last), column).equals(value)) {
+                    last++;
+                }
+                last--;
+                for (int i = first; i <= last; i++) {
                     results.add(users.get(i));
-                    i++;
                 }
                 break;
             }
@@ -429,14 +464,35 @@ public class UserApp {
         return results;
     }
 
-    // Metoda wyszukiwania ³añcuchowego
+    // Metoda pomocnicza do sprawdzania, czy lista jest posortowana wed³ug kolumny
+    private static boolean isSorted(List<User> users, String column) {
+        for (int i = 1; i < users.size(); i++) {
+            if (getFieldValue(users.get(i - 1), column).compareTo(getFieldValue(users.get(i), column)) > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // HashMap for chain search
+    private static Map<String, Map<String, List<User>>> hashMap = new HashMap<>();
+
+    // Metoda wyszukiwania ³añcuchowegoW
     public static List<User> chainSearch(List<User> users, String column, String value) {
-        Map<String, List<User>> hashMap = new HashMap<>();
+        if (!hashMap.containsKey(column)) {
+            buildHashMap(users, column);
+        }
+        return hashMap.getOrDefault(column, new HashMap<>()).getOrDefault(value, new ArrayList<>());
+    }
+
+    // Metoda budowania HashMap w tle
+    public static void buildHashMap(List<User> users, String column) {
+        Map<String, List<User>> columnMap = new HashMap<>();
         for (User user : users) {
             String key = getFieldValue(user, column);
-            hashMap.computeIfAbsent(key, k -> new ArrayList<>()).add(user);
+            columnMap.computeIfAbsent(key, k -> new ArrayList<>()).add(user);
         }
-        return hashMap.getOrDefault(value, new ArrayList<>());
+        hashMap.put(column, columnMap);
     }
 
     // Metoda pomocnicza do porównywania wartoœci pola
@@ -444,7 +500,7 @@ public class UserApp {
         return getFieldValue(user, column).equals(value);
     }
 
-    // Metoda pomocnicza do pobierania wartoœci pola
+    // Metoda pomocnicza do pobierania warto?ci pola
     public static String getFieldValue(User user, String column) {
         switch (column.toLowerCase()) {
             case "id": return String.valueOf(user.getId());
@@ -459,7 +515,7 @@ public class UserApp {
         }
     }
 
-    // Metoda pomocnicza do wyœwietlania wyników wyszukiwania
+    // Metoda pomocnicza do wy?wietlania wyników wyszukiwania
     public static void displaySearchResults(List<User> results, long searchTime) {
         if (results.isEmpty()) {
             JOptionPane.showMessageDialog(null, "Nie znaleziono wynikow. Czas wyszukiwania: " + searchTime + " ms");
@@ -473,7 +529,7 @@ public class UserApp {
     // Metoda pomocnicza do aktualizacji tabeli z wynikami wyszukiwania
     public static void updateTableWithResults(JTable table, List<User> results) {
         DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
-        tableModel.setRowCount(0); // Usuñ wszystkie wiersze z tabeli
+        tableModel.setRowCount(0); // Usu? wszystkie wiersze z tabeli
         for (User user : results) {
             tableModel.addRow(new Object[]{
                 user.getId(), user.getImie(), user.getNazwisko(), user.getWiek(),

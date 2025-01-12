@@ -110,8 +110,12 @@ public class UserApp {
             reader.close();
         }
     }
-
+    public class GlobalVariables {
+        // Zmienna statyczna globalna
+        public static boolean IsSort =  false;
+    }
     public static void main(String[] args) {
+      
         JFrame frame = new JFrame("User Management");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(1000, 700);
@@ -192,6 +196,12 @@ public class UserApp {
         gbc.gridwidth = 1;
         addUserPanel.add(showAllUsers, gbc);
 
+        JButton showTabelBegin = new JButton("Pokaz tablice pocz¹tków");
+        gbc.gridx = 1;
+        gbc.gridy = 8;
+        gbc.gridwidth = 1;
+        addUserPanel.add(showTabelBegin, gbc);
+
         panel.add(addUserPanel);
 
         showAllUsers.addActionListener(new ActionListener() {
@@ -205,6 +215,34 @@ public class UserApp {
                 user.getId(), user.getImie(), user.getNazwisko(), user.getWiek(),
                 user.getWzrost(), user.getNrTelefonu(), user.isStatusStudenta(), user.isZatrudnienie()
                 });
+            }
+            }
+        });
+
+
+        showTabelBegin.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            DefaultTableModel hashMapTableModel = new DefaultTableModel(new String[]{"Column", "Value", "Users"}, 0);
+            JTable hashMapTable = new JTable(hashMapTableModel);
+            JScrollPane hashMapScrollPane = new JScrollPane(hashMapTable);
+            JFrame hashMapFrame = new JFrame("Begins Table");
+            hashMapFrame.setSize(600, 400);
+            hashMapFrame.add(hashMapScrollPane);
+            hashMapFrame.setVisible(true);
+
+            hashMapTableModel.setRowCount(0); // Clear previous data
+            for (Map.Entry<String, Map<String, List<User>>> columnEntry : hashMap.entrySet()) {
+                String column = columnEntry.getKey();
+                for (Map.Entry<String, List<User>> valueEntry : columnEntry.getValue().entrySet()) {
+                    String value = valueEntry.getKey();
+                    List<User> users = valueEntry.getValue();
+                    StringBuilder usersString = new StringBuilder();
+                    for (User user : users) {
+                        usersString.append(user.getId()).append(", ");
+                    }
+                    hashMapTableModel.addRow(new Object[]{column, value, usersString.toString()});
+                }
             }
             }
         });
@@ -234,7 +272,7 @@ public class UserApp {
         generateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String[] options = {"100 000", "200 000", "300 000", "500 000", "1 000 000", "2 000 000", "5 000 000", "10 000 000", "15 000 000", "20 000 000"};
+                String[] options = {"10", "100", "100 000", "200 000", "300 000", "500 000", "1 000 000", "2 000 000", "5 000 000", "10 000 000", "15 000 000", "20 000 000"};
                 String input = (String) JOptionPane.showInputDialog(frame, "Wybierz liczbe uzytkownikow do wygenerowania:", "Generowanie Uzytkownikow", JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
                 int count = Integer.parseInt(input.replace(" ", ""));
                 userManager.generateRandomUsers(count);
@@ -333,7 +371,7 @@ public class UserApp {
                 long startTime = System.currentTimeMillis();
                 String column = "ID";
                 String value = String.valueOf(id);
-                List<User> results = binarySearch(userManager.getAllUsers(), column, value);
+                List<User> results = binarySearch(userManager.getAllUsers(), column, value,GlobalVariables.IsSort);
                 long endTime = System.currentTimeMillis();
                 updateTableWithResults(table, results);
                 displaySearchResults(results, endTime - startTime);
@@ -364,14 +402,12 @@ public class UserApp {
         binarySearchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String[] columns = {"ID", "Imie", "Nazwisko", "Wiek", "Wzrost", "Nr Telefonu", "Status Studenta", "Zatrudnienie"};
-                String column = (String) JOptionPane.showInputDialog(frame, "Wybierz kolumne do wyszukania:", "Wyszukiwanie", JOptionPane.QUESTION_MESSAGE, null, columns, columns[0]);
-                String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
-                long startTime = System.currentTimeMillis();
-                List<User> results = binarySearch(userManager.getAllUsers(), column, value);
-                long endTime = System.currentTimeMillis();
-                updateTableWithResults(table, results);
-                displaySearchResults(results, endTime - startTime);
+            String[] columns = {"ID", "Imie", "Nazwisko", "Wiek", "Wzrost", "Nr Telefonu", "Status Studenta", "Zatrudnienie"};
+            String column = (String) JOptionPane.showInputDialog(frame, "Wybierz kolumne do wyszukania:", "Wyszukiwanie", JOptionPane.QUESTION_MESSAGE, null, columns, columns[0]);
+            String value = JOptionPane.showInputDialog(frame, "Podaj wartosc do wyszukania:");
+            List<User> results = binarySearch(userManager.getAllUsers(), column, value, GlobalVariables.IsSort);
+            updateTableWithResults(table, results);
+            displaySearchResults(results, 0); // Pass 0 as time is displayed in binarySearch method
             }
         });
 
@@ -389,6 +425,7 @@ public class UserApp {
                 long endTime = System.currentTimeMillis();
                 updateTableWithResults(table, results);
                 displaySearchResults(results, endTime - startTime);
+
             }
         });
 
@@ -426,44 +463,50 @@ public class UserApp {
         }
         return results;
     }
+        boolean IsSort = false;
 
-    // Metoda wyszukiwania binarnego
-    public static List<User> binarySearch(List<User> users, String column, String value) {
-        List<User> results = new ArrayList<>();
-        if (!isSorted(users, column)) {
-            users.sort(Comparator.comparing(user -> getFieldValue(user, column)));
-        }
-        int left = 0;
-        int right = users.size() - 1;
-        while (left <= right) {
-            int mid = left + (right - left) / 2;
-            String midValue = getFieldValue(users.get(mid), column);
-            if (midValue.equals(value)) {
-                // Find the first occurrence
-                int first = mid;
-                while (first >= left && getFieldValue(users.get(first), column).equals(value)) {
-                    first--;
-                }
-                first++;
-                int last = mid;
-                while (last <= right && getFieldValue(users.get(last), column).equals(value)) {
-                    last++;
-                }
-                last--;
-                for (int i = first; i <= last; i++) {
-                    results.add(users.get(i));
-                }
-                break;
+        // Metoda wyszukiwania binarnego
+        public static List<User> binarySearch(List<User> users, String column, String value, boolean IsSort) {
+            List<User> results = new ArrayList<>();
+            if (!isSorted(users, column) && IsSort == false) {
+                IsSort = true;
+                users.sort(Comparator.comparing(user -> getFieldValue(user, column)));
             }
-            if (midValue.compareTo(value) < 0) {
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-        return results;
-    }
 
+            long startTime = System.currentTimeMillis(); // Start measuring time for binary search
+            int left = 0;
+            int right = users.size() - 1;
+            while (left <= right) {
+                int mid = left + (right - left) / 2;
+                String midValue = getFieldValue(users.get(mid), column);
+                if (midValue.equals(value)) {
+                    // Find the first occurrence
+                    int first = mid;
+                    while (first >= left && getFieldValue(users.get(first), column).equals(value)) {
+                        first--;
+                    }
+                    first++;
+                    int last = mid;
+                    while (last <= right && getFieldValue(users.get(last), column).equals(value)) {
+                        last++;
+                    }
+                    last--;
+                    for (int i = first; i <= last; i++) {
+                        results.add(users.get(i));
+                    }
+                    break;
+                }
+                if (midValue.compareTo(value) < 0) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
+                }
+            }
+            long endTime = System.currentTimeMillis(); // End measuring time for binary search
+            System.out.println("Binary search time: " + (endTime - startTime) + " ms");
+
+            return results;
+        }
     // Metoda pomocnicza do sprawdzania, czy lista jest posortowana wed³ug kolumny
     private static boolean isSorted(List<User> users, String column) {
         for (int i = 1; i < users.size(); i++) {
